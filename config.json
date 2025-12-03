@@ -6,21 +6,37 @@
   },
   "target_metrics": {
     "win_rate_target": 0.85,
-    "win_rate_realistic": 0.70,
+    "win_rate_realistic": 0.7,
     "min_signal_frequency": "2-3 per week",
     "min_risk_reward": 2.0,
     "ideal_risk_reward": 2.5
   },
   "indicators": {
-    "trend": ["SMA", "EMA", "HMA", "SMMA"],
-    "momentum": ["RSI(14)", "MACD(12,26,9)", "ROC(10)"],
-    "volatility": ["Bollinger Bands(20,2)", "ATR(14)"],
-    "price_action": ["Trendlines", "Heikin Ashi", "Volume"]
+    "trend": [
+      "SMA",
+      "EMA",
+      "HMA",
+      "SMMA"
+    ],
+    "momentum": [
+      "RSI(14)",
+      "MACD(12,26,9)",
+      "ROC(10)"
+    ],
+    "volatility": [
+      "Bollinger Bands(20,2)",
+      "ATR(14)"
+    ],
+    "price_action": [
+      "Trendlines",
+      "Heikin Ashi",
+      "Volume"
+    ]
   },
   "risk_management": {
     "max_risk_per_trade": 0.02,
     "max_portfolio_risk": 0.06,
-    "max_drawdown": 0.10,
+    "max_drawdown": 0.1,
     "daily_loss_limit": 0.02,
     "consecutive_loss_threshold": 3,
     "max_positions": 5,
@@ -29,7 +45,7 @@
   },
   "validation": {
     "min_backtest_trades": 100,
-    "out_of_sample_pct": 0.30,
+    "out_of_sample_pct": 0.3,
     "walk_forward_window": "1 month",
     "multi_asset_required": true,
     "multi_timeframe_required": true
@@ -65,12 +81,17 @@
     },
     "time_of_day": {
       "enabled": true,
-      "high_liquidity_hours": ["09:30-11:30", "14:00-16:00"]
+      "high_liquidity_hours": [
+        "09:30-11:30",
+        "14:00-16:00"
+      ],
+      "timezone": "EST (US/Eastern)",
+      "note": "Times are market-specific. Adjust for your exchange/timezone"
     }
   },
   "implementation": {
     "paper_trading_weeks": 4,
-    "initial_position_size_pct": 0.50,
+    "initial_position_size_pct": 0.5,
     "scale_up_period_months": 2,
     "monitoring_frequency": "daily",
     "review_frequency": "weekly"
@@ -100,9 +121,9 @@
       "enabled": true,
       "top_strategies_count": 3,
       "scoring_weights": {
-        "win_rate": 0.40,
+        "win_rate": 0.4,
         "risk_reward": 0.25,
-        "signal_frequency": 0.20,
+        "signal_frequency": 0.2,
         "simplicity": 0.15
       }
     }
