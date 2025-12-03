@@ -91,7 +91,11 @@ class TechnicalIndicators:
         lowest_low = pd.Series(low).rolling(window=k_period).min().values
         highest_high = pd.Series(high).rolling(window=k_period).max().values
         
-        k_values = 100 * (close - lowest_low) / (highest_high - lowest_low)
+        # Prevent division by zero
+        range_hl = highest_high - lowest_low
+        range_hl = np.where(range_hl == 0, 1e-10, range_hl)
+        
+        k_values = 100 * (close - lowest_low) / range_hl
         k_values = pd.Series(k_values).rolling(window=smooth).mean().values
         d_values = pd.Series(k_values).rolling(window=d_period).mean().values
         
@@ -120,12 +124,17 @@ class TechnicalIndicators:
         # Calculate ATR
         atr_values = TechnicalIndicators.atr(high, low, close, period)
         
-        # Calculate +DI and -DI
-        plus_di = 100 * pd.Series(plus_dm).rolling(window=period).mean().values / atr_values
-        minus_di = 100 * pd.Series(minus_dm).rolling(window=period).mean().values / atr_values
+        # Prevent division by zero in ATR
+        atr_safe = np.where(atr_values == 0, 1e-10, atr_values)
         
-        # Calculate DX and ADX
-        dx = 100 * np.abs(plus_di - minus_di) / (plus_di + minus_di)
+        # Calculate +DI and -DI
+        plus_di = 100 * pd.Series(plus_dm).rolling(window=period).mean().values / atr_safe
+        minus_di = 100 * pd.Series(minus_dm).rolling(window=period).mean().values / atr_safe
+        
+        # Calculate DX and ADX - prevent division by zero
+        di_sum = plus_di + minus_di
+        di_sum = np.where(di_sum == 0, 1e-10, di_sum)
+        dx = 100 * np.abs(plus_di - minus_di) / di_sum
         adx_values = pd.Series(dx).rolling(window=period).mean().values
         
         return adx_values
@@ -138,7 +147,9 @@ class TechnicalIndicators:
     @staticmethod
     def bbw(upper: np.ndarray, middle: np.ndarray, lower: np.ndarray) -> np.ndarray:
         """Calculate Bollinger Band Width"""
-        return (upper - lower) / middle
+        # Prevent division by zero (though unlikely with real price data)
+        middle_safe = np.where(middle == 0, 1e-10, middle)
+        return (upper - lower) / middle_safe
 
 
 class MCMVRFStrategy:
