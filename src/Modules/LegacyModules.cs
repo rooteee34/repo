@@ -105,9 +105,6 @@ namespace AnoreksikSuite {
             chkEnablePano.Checked = true;
             chkEnablePano.CheckedChanged += (s,e) => { ApplyDashboardVisibility(); SaveDashboardConfig(); };
 
-            // ... (Additional dashboard config UI skipped for brevity but logic is here)
-            // Added crucial logic for Save/Load
-
             Button btnSaveDash = CreateBtn("KAYDET VE UYGULA", 10, 500, 660, Color.DarkGreen, dashboardPage);
             btnSaveDash.Height = 40;
             btnSaveDash.Click += (s,e) => {
@@ -179,8 +176,6 @@ namespace AnoreksikSuite {
                 bool wifiEnabled = chkEnableWifi != null && chkEnableWifi.Checked;
                 if (wifiEnabled) {
                     if (!tabs.TabPages.Contains(wifiPage)) tabs.TabPages.Add(wifiPage);
-                    // StartWifiWatchdog logic is handled by checkbox in Wifi Tab now (fixed)
-                    // But we might want to ensure consistency
                 }
                 else {
                     if (tabs.TabPages.Contains(wifiPage)) tabs.TabPages.Remove(wifiPage);
@@ -303,7 +298,6 @@ namespace AnoreksikSuite {
         }
 
         private void TrimSystemFileCache() {
-            // Implementation of TrimSystemFileCache using NtSetSystemInformation (Class 21)
              Task.Run(() => {
                 try {
                     if (Environment.Is64BitOperatingSystem) {
@@ -313,8 +307,6 @@ namespace AnoreksikSuite {
                         GCHandle handle = GCHandle.Alloc(cacheInfo, GCHandleType.Pinned);
                         NativeMethods.NtSetSystemInformation(NativeMethods.SystemFileCacheInformation, handle.AddrOfPinnedObject(), Marshal.SizeOf(cacheInfo));
                         handle.Free();
-                    } else {
-                        // 32-bit impl
                     }
                     SafeMessageBox("Sistem Dosya Onbellegi temizlendi!");
                 } catch {}
@@ -322,7 +314,6 @@ namespace AnoreksikSuite {
         }
 
         private void CompressApps() {
-             // Iterate processes and EmptyWorkingSet
              Task.Run(() => {
                  Process current = Process.GetCurrentProcess();
                  foreach(Process p in Process.GetProcesses()) {
@@ -352,13 +343,11 @@ namespace AnoreksikSuite {
         }
 
         private void RefreshProcs() {
-            // Implementation...
              cmbProcList.Items.Clear();
              foreach(Process p in Process.GetProcesses()) cmbProcList.Items.Add(p.ProcessName);
         }
 
         private void BoostProc() {
-            // Implementation...
              if (cmbProcList.SelectedItem == null) return;
              string name = cmbProcList.SelectedItem.ToString();
              foreach(Process p in Process.GetProcessesByName(name)) {
@@ -460,7 +449,6 @@ namespace AnoreksikSuite {
         }
 
         private void ClipboardLoop(object s, EventArgs e) {
-             // Basic clipboard history implementation
              if (Clipboard.ContainsText()) {
                  string txt = Clipboard.GetText();
                  if (txt != lastClipText) {
@@ -471,7 +459,7 @@ namespace AnoreksikSuite {
         }
 
         private void StopActivityWatcher() {
-             // Placeholder to prevent build error if ActivityWatcher module is not loaded
+             if (activityTimer != null) activityTimer.Stop();
         }
     }
 }
