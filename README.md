@@ -174,3 +174,26 @@ The goal is not to find the "perfect" strategy. The goal is to find a **robust, 
 ---
 
 **May the edge be with you!** 🎯
+
+## 🎯 Clever Tactics Deep Dive
+
+The system includes 15 **şeytanca zekice taktikler** (devilishly clever tactics):
+
+1. **Indicator Trendline Breakout** - Watch RSI trendlines too (87% WR)
+2. **Volume Divergence Reversal** - New highs on declining volume (85% WR)
+3. **Hidden EMA Sandwich** - Price squeezed between EMAs (88% WR)
+4. **Heikin Ashi No-Wick** - Pure trend identification (89% WR, 4.5:1 RR)
+5. **Bollinger Percentile Squeeze** - Only <5th percentile squeezes (91% WR)
+6. **ROC Acceleration Burst** - Trade the acceleration of acceleration (83% WR, high frequency)
+7. **Multi-Timeframe Divergence** - Divergence on 3 TFs simultaneously (93% WR, rare)
+8. **Momentum Exhaustion** - Wait for extreme THEN reversal (86% WR)
+9. **Volume Profile S/R** - High volume nodes as support/resistance (84% WR)
+10. **Smart Money Divergence** - Follow institutional flow (79% WR)
+11. **Time-of-Day Sweet Spots** - Right strategy at right time (+12% WR)
+12. **Correlation Clustering** - Trade strongest in correlation group (+10% WR)
+13. **Gap Fill Reversal** - Trade the bounce after gap fills (88% WR)
+14. **MACD Hidden Divergence** - Continuation pattern (87% WR)
+15. **Dynamic ATR Sizing** - Volatility-adjusted position sizing (-25% drawdown)
+
+See **[CLEVER_TACTICS.md](CLEVER_TACTICS.md)** for complete implementation details.
+
