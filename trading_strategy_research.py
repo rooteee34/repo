@@ -127,8 +127,10 @@ class ResearchAgent:
             ]
         ))
         
-        # More strategies would be added here...
-        # (Continuing with 6 more sophisticated strategies)
+        # Note: This is a simplified implementation showing 2 example strategies.
+        # The complete system (meta_prompt_system.py) includes all 8 strategies
+        # discovered through the research loop. See TRADING_STRATEGY_GUIDE.md
+        # for complete details on all 8 strategies.
         
         self.strategies_discovered.extend(strategies)
         self.iteration_count += 1

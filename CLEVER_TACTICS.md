@@ -223,15 +223,16 @@ Find divergence on multiple timeframes simultaneously
 **Implementation:**
 ```python
 # Check 3 timeframes: 15min, 1H, 4H
-def check_divergence(tf):
-    price_lower_low = low < low[5]
-    rsi_higher_low = rsi > rsi[5]
+def check_divergence(price_data, rsi_data):
+    """Check for bullish divergence on given timeframe data"""
+    price_lower_low = price_data['low'] < price_data['low'][5]
+    rsi_higher_low = rsi_data > rsi_data[5]
     return price_lower_low and rsi_higher_low
 
 # All three timeframes showing divergence
-tf_15min_div = check_divergence('15min')
-tf_1h_div = check_divergence('1H')
-tf_4h_div = check_divergence('4H')
+tf_15min_div = check_divergence(price_15min, rsi_15min)
+tf_1h_div = check_divergence(price_1h, rsi_1h)
+tf_4h_div = check_divergence(price_4h, rsi_4h)
 
 # This is RARE but POWERFUL
 triple_divergence = tf_15min_div and tf_1h_div and tf_4h_div
