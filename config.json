@@ -1,0 +1,110 @@
+{
+  "research_loop": {
+    "default_iterations": 3,
+    "continuous_mode": false,
+    "auto_improve": true
+  },
+  "target_metrics": {
+    "win_rate_target": 0.85,
+    "win_rate_realistic": 0.70,
+    "min_signal_frequency": "2-3 per week",
+    "min_risk_reward": 2.0,
+    "ideal_risk_reward": 2.5
+  },
+  "indicators": {
+    "trend": ["SMA", "EMA", "HMA", "SMMA"],
+    "momentum": ["RSI(14)", "MACD(12,26,9)", "ROC(10)"],
+    "volatility": ["Bollinger Bands(20,2)", "ATR(14)"],
+    "price_action": ["Trendlines", "Heikin Ashi", "Volume"]
+  },
+  "risk_management": {
+    "max_risk_per_trade": 0.02,
+    "max_portfolio_risk": 0.06,
+    "max_drawdown": 0.10,
+    "daily_loss_limit": 0.02,
+    "consecutive_loss_threshold": 3,
+    "max_positions": 5,
+    "max_correlated_positions": 3,
+    "max_leverage": 2.0
+  },
+  "validation": {
+    "min_backtest_trades": 100,
+    "out_of_sample_pct": 0.30,
+    "walk_forward_window": "1 month",
+    "multi_asset_required": true,
+    "multi_timeframe_required": true
+  },
+  "clever_tactics": {
+    "multi_timeframe_synergy": true,
+    "time_of_day_optimization": true,
+    "volume_confirmation": true,
+    "indicator_divergence": true,
+    "dynamic_stops": true,
+    "scaling_tactics": true
+  },
+  "filters": {
+    "market_regime": {
+      "enabled": true,
+      "indicator": "ADX(14)",
+      "trending_threshold": 25,
+      "ranging_threshold": 20
+    },
+    "correlation": {
+      "enabled": true,
+      "max_correlated": 3
+    },
+    "volatility": {
+      "enabled": true,
+      "indicator": "ATR(14)",
+      "filter_extremes": true
+    },
+    "momentum": {
+      "enabled": true,
+      "indicator": "ROC(10)",
+      "confirm_direction": true
+    },
+    "time_of_day": {
+      "enabled": true,
+      "high_liquidity_hours": ["09:30-11:30", "14:00-16:00"]
+    }
+  },
+  "implementation": {
+    "paper_trading_weeks": 4,
+    "initial_position_size_pct": 0.50,
+    "scale_up_period_months": 2,
+    "monitoring_frequency": "daily",
+    "review_frequency": "weekly"
+  },
+  "agents": {
+    "research": {
+      "enabled": true,
+      "strategy_generation_count": 8,
+      "innovation_focus": "high"
+    },
+    "critic": {
+      "enabled": true,
+      "strictness": "high",
+      "challenge_assumptions": true
+    },
+    "developer": {
+      "enabled": true,
+      "propose_enhancements": true,
+      "focus_on_simplicity": true
+    },
+    "risk_manager": {
+      "enabled": true,
+      "strictness": "very_high",
+      "worst_case_scenarios": true
+    },
+    "synthesis": {
+      "enabled": true,
+      "top_strategies_count": 3,
+      "scoring_weights": {
+        "win_rate": 0.40,
+        "risk_reward": 0.25,
+        "signal_frequency": 0.20,
+        "simplicity": 0.15
+      }
+    }
+  }
+}
