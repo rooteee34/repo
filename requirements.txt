@@ -1,0 +1,5 @@
+# META-PROMPT RESEARCH LOOP MODE
+# Core dependencies for the trading indicator validation system
+
+# No external dependencies required - uses Python standard library only
+# Python 3.8+ required
