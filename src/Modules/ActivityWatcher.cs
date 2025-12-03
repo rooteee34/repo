@@ -4,6 +4,8 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Text;
+using System.IO;
 
 namespace AnoreksikSuite {
     public partial class MainForm {
@@ -61,11 +63,6 @@ namespace AnoreksikSuite {
 
                 string currentProcess = p.ProcessName;
                 string currentTitle = p.MainWindowTitle;
-
-                // Browser URL detection (Basic via Title if UIAutomation not avail)
-                // Note: Getting URL requires UIAutomation which needs System.Windows.Automation
-                // Since I cannot add references easily in this single file context without project file modification,
-                // I will use Title based tracking which browsers usually put Title - BrowserName.
 
                 if (currentProcess != lastProcessName || currentTitle != lastWindowTitle) {
                     TimeSpan duration = DateTime.Now - lastSwitchTime;

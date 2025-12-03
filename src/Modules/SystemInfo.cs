@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using System.Drawing;
 using System.Management;
+using System.Threading.Tasks;
 
 namespace AnoreksikSuite {
     public partial class MainForm {

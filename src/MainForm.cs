@@ -139,6 +139,7 @@ namespace AnoreksikSuite {
             InitTab_DISK();
             InitTab_WIFI();
             InitTab_TOOLS();
+            InitTab_Pano(); // Added explicit call to InitTab_Pano
             InitTab_ActivityWatcher();
             InitTab_Startup();
             InitTab_Security();

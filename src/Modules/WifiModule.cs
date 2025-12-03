@@ -50,8 +50,6 @@ namespace AnoreksikSuite {
             chkWifiActive = CreateCheck("Wifi Bekcisini Aktif Et", 10, 10, wifiPage);
             chkWifiActive.ForeColor = Color.Yellow;
 
-            // FIXED: Only toggle active flag if the main dashboard toggle is also on?
-            // Actually, StartWifiWatchdog shouldn't force wifiModuleActive = true.
             chkWifiActive.CheckedChanged += (s,e) => {
                 if (chkWifiActive.Checked) {
                     wifiModuleActive = true;
@@ -64,9 +62,9 @@ namespace AnoreksikSuite {
                         wifiSignalTimer.Start();
                     }
 
-                    StartWifiWatchdog(); // Ensure task is running if not already
+                    StartWifiWatchdog();
                 } else {
-                    wifiModuleActive = false; // The loop will just sleep
+                    wifiModuleActive = false;
                     if (wifiSignalTimer != null) wifiSignalTimer.Stop();
 
                     if (lblWifiStat != null) { lblWifiStat.Text = "Pasif"; lblWifiStat.ForeColor = Color.Gray; }
@@ -161,14 +159,6 @@ namespace AnoreksikSuite {
 
         private void StartWifiWatchdog() {
             if (wifiWatchdogTask != null && !wifiWatchdogTask.IsCompleted) return;
-
-            // Do NOT set wifiModuleActive = true here automatically.
-            // Let the checkbox control it.
-            // However, if called from Dashboard enable, we should respect the inner checkbox.
-            // But if the user enables Dashboard tab, maybe they expect it to run?
-            // The user complaint was "checkbox pasif olmasına rağmen çalışmaya başlıyor".
-            // So we strictly obey chkWifiActive.Checked.
-
             wifiCts = new CancellationTokenSource();
             wifiWatchdogTask = Task.Factory.StartNew(() => WatchdogLoop(wifiCts.Token), wifiCts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
@@ -188,20 +178,33 @@ namespace AnoreksikSuite {
             using (Ping localPing = new Ping()) {
                 byte[] localBuffer = new byte[32];
                 PingOptions localOptions = new PingOptions(64, true);
+                int lastTtl = 64;
+                int lastBufSize = 32;
+
+                int timeout = wifiTimeout;
+                int maxFail = wifiFailureThreshold;
+                int ttl = wifiTTL;
+                int bufSize = wifiBufferSize;
 
                 while (!isShuttingDown && ! ct.IsCancellationRequested) {
                     if (! wifiModuleActive) {
                         Thread.Sleep(IDLE_SLEEP_MS);
                         continue;
                     }
-                    // ... (Implementation same as v7 but inside loop)
-                    // Simplified for brevity, assume full logic here
                     try {
                         if (isResetting) { Thread.Sleep(IDLE_SLEEP_MS); continue; }
 
+                        timeout = wifiTimeout;
+                        maxFail = wifiFailureThreshold;
+                        ttl = wifiTTL;
+                        bufSize = wifiBufferSize;
+
+                        if (lastTtl != ttl) { localOptions.Ttl = ttl; lastTtl = ttl; }
+                        if (lastBufSize != bufSize) { localBuffer = new byte[bufSize]; lastBufSize = bufSize; }
+
                         sw.Restart();
                         PingReply reply = null;
-                        try { reply = localPing.Send(wifiTargetIP, wifiTimeout, localBuffer, localOptions); }
+                        try { reply = localPing.Send(wifiTargetIP, timeout, localBuffer, localOptions); }
                         catch { Interlocked.Increment(ref failureCount); }
                         finally { sw.Stop(); }
 
@@ -211,15 +214,15 @@ namespace AnoreksikSuite {
                                 if (lblWifiStat != null) { lblWifiStat.Text = "Online"; lblWifiStat.ForeColor = Color.Lime; }
                                 if (lblWifiPing != null) lblWifiPing.Text = "Ping: " + reply.RoundtripTime + " ms";
                             });
-                            int wait = wifiTimeout - (int)sw.ElapsedMilliseconds;
+                            int wait = timeout - (int)sw.ElapsedMilliseconds;
                             if (wait > 0) Thread.Sleep(wait);
                         } else {
                             Interlocked.Increment(ref failureCount);
                              SafeInvoke(() => {
-                                if (lblWifiStat != null) { lblWifiStat.Text = "HATA: " + failureCount + "/" + wifiFailureThreshold; lblWifiStat.ForeColor = Color.Red; }
+                                if (lblWifiStat != null) { lblWifiStat.Text = "HATA: " + failureCount + "/" + maxFail; lblWifiStat.ForeColor = Color.Red; }
                             });
 
-                            if (failureCount >= wifiFailureThreshold) {
+                            if (failureCount >= maxFail) {
                                 bool shouldReset = false;
                                 lock (resetLock) { if (!isResetting) { isResetting = true; shouldReset = true; Interlocked.Exchange(ref failureCount, 0); } }
                                 if (shouldReset) PerformReset(ct);
@@ -275,29 +278,42 @@ namespace AnoreksikSuite {
                     string signalStr = GetWifiSignalStrength();
                     string speedStr = GetWifiSpeed();
 
+                    int signalValue = 0;
+                    int speedValue = 0;
+
+                    if (!string.IsNullOrEmpty(signalStr)) int.TryParse(signalStr.Replace("%", ""), out signalValue);
+                    if (!string.IsNullOrEmpty(speedStr)) int.TryParse(Regex.Match(speedStr, @"\d+").Value, out speedValue);
+
                     SafeInvoke(() => {
-                        if (lblWifiSignal != null) lblWifiSignal.Text = "Sinyal: " + signalStr;
-                        if (lblWifiSpeed != null) lblWifiSpeed.Text = "Hiz: " + speedStr;
+                        if (lblWifiSignal != null) {
+                            lblWifiSignal.Text = "Sinyal: " + signalStr;
+                            lblWifiSignal.ForeColor = signalValue > 70 ? Color.Lime : signalValue > 40 ? Color.Yellow : Color.Red;
+                        }
+                        if (lblWifiSpeed != null) {
+                            lblWifiSpeed.Text = "Hiz: " + speedStr;
+                            lblWifiSpeed.ForeColor = speedValue >= 100 ? Color.Cyan : Color.LightGray;
+                        }
                     });
                 } finally { Interlocked.Exchange(ref isSignalProcessing, 0); }
             });
         }
 
         private void KeepAliveLoop(object s, EventArgs e) {
-             // Implementation...
              Task.Run(() => {
                  try {
                      var reply = keepAlivePing.Send(wifiTargetIP, 100, keepAliveBuffer, new PingOptions(64, true));
                      if (reply != null && reply.Status == IPStatus.Success) {
                          SafeInvoke(() => { if (pnlKeepAliveIndicator != null) pnlKeepAliveIndicator.BackColor = Color.Lime; });
-                         Thread.Sleep(100);
-                         SafeInvoke(() => { if (pnlKeepAliveIndicator != null) pnlKeepAliveIndicator.BackColor = Color.DarkGreen; });
+                         System.Threading.Timer t = null;
+                         t = new System.Threading.Timer(_ => {
+                             SafeInvoke(() => { if (pnlKeepAliveIndicator != null) pnlKeepAliveIndicator.BackColor = Color.DarkGreen; });
+                             if(t!=null) t.Dispose();
+                         }, null, 100, Timeout.Infinite);
                      }
                  } catch {}
              });
         }
 
-        // --- Native Wifi Helpers (Same as before) ---
         private Task<bool> NativeWifiDisconnect() {
              return Task.Factory.StartNew(() => {
                 bool success = false;
@@ -345,18 +361,88 @@ namespace AnoreksikSuite {
         }
 
         private string GetSSID() {
-             // Implementation...
-             return "SSID";
+            try {
+                uint ver; IntPtr handle = IntPtr.Zero; IntPtr ifacePtr = IntPtr.Zero;
+                if(NativeMethods.WlanOpenHandle(2, IntPtr.Zero, out ver, out handle) == 0) {
+                    if(NativeMethods.WlanEnumInterfaces(handle, IntPtr.Zero, out ifacePtr) == 0) {
+                        var list = (NativeMethods.WLAN_INTERFACE_INFO_LIST)Marshal.PtrToStructure(ifacePtr, typeof(NativeMethods.WLAN_INTERFACE_INFO_LIST));
+                        if(list.dwNumberOfItems > 0) {
+                            var info = (NativeMethods.WLAN_INTERFACE_INFO)Marshal.PtrToStructure(new IntPtr(ifacePtr.ToInt64() + 8), typeof(NativeMethods.WLAN_INTERFACE_INFO));
+                            uint sz; IntPtr dataPtr = IntPtr.Zero;
+                            Guid tempGuid = info.InterfaceGuid;
+                            if(NativeMethods.WlanQueryInterface(handle, ref tempGuid, NativeMethods.WLAN_INTF_OPCODE.wlan_intf_opcode_current_connection, IntPtr.Zero, out sz, out dataPtr, IntPtr.Zero) == 0) {
+                                if (dataPtr != IntPtr.Zero) {
+                                    var attr = (NativeMethods.WLAN_CONNECTION_ATTRIBUTES)Marshal.PtrToStructure(dataPtr, typeof(NativeMethods.WLAN_CONNECTION_ATTRIBUTES));
+                                    byte[] ssidBytes = attr.wlanAssociationAttributes.dot11Ssid.ucSSID;
+                                    int ssidLen = (int)attr.wlanAssociationAttributes.dot11Ssid.uSSIDLength;
+                                    if (ssidLen > 0 && ssidLen <= 32) {
+                                        string ssid = Encoding.UTF8.GetString(ssidBytes, 0, ssidLen);
+                                        NativeMethods.WlanFreeMemory(dataPtr);
+                                        NativeMethods.WlanCloseHandle(handle, IntPtr.Zero);
+                                        NativeMethods.WlanFreeMemory(ifacePtr);
+                                        return ssid;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (ifacePtr != IntPtr.Zero) NativeMethods.WlanFreeMemory(ifacePtr);
+                    NativeMethods.WlanCloseHandle(handle, IntPtr.Zero);
+                }
+            } catch { }
+            return "Bulunamadi";
         }
 
         private string GetWifiSignalStrength() {
-            // Implementation...
-            return "100%";
+            Process p = null;
+            try {
+                ProcessStartInfo psi = new ProcessStartInfo {
+                    FileName = "netsh.exe",
+                    Arguments = "wlan show interfaces",
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                p = new Process();
+                p.StartInfo = psi;
+                p.Start();
+                string output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit(2000);
+                if (!p.HasExited) p.Kill();
+
+                Match match = Regex.Match(output, @"Signal\s*:\s*(\d+)%", RegexOptions.IgnoreCase);
+                if (!match.Success) match = Regex.Match(output, @"Sinyal\s*:\s*(\d+)%", RegexOptions.IgnoreCase);
+                if (match.Success) return match.Groups[1].Value + "%";
+            } catch { } finally { if(p!=null) p.Dispose(); }
+            return "0%";
         }
 
         private string GetWifiSpeed() {
-            // Implementation...
-            return "100 Mbps";
+            Process p = null;
+            try {
+                ProcessStartInfo psi = new ProcessStartInfo {
+                    FileName = "netsh.exe",
+                    Arguments = "wlan show interfaces",
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                p = new Process();
+                p.StartInfo = psi;
+                p.Start();
+                string output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit(2000);
+                if (!p.HasExited) p.Kill();
+
+                Match match = Regex.Match(output, @"Receive rate.*?:\s*(\d+)", RegexOptions.IgnoreCase);
+                if (!match.Success) match = Regex.Match(output, @"Alma h[ıi]z[ıi].*?:\s*(\d+)", RegexOptions.IgnoreCase);
+                if (match.Success) return match.Groups[1].Value + " Mbps";
+            } catch { } finally { if(p!=null) p.Dispose(); }
+            return "0 Mbps";
         }
 
         private void RunFastNetsh(string args) {
@@ -369,19 +455,89 @@ namespace AnoreksikSuite {
         }
 
         private void AddWifiLog(string msg) {
-            // Implementation...
+            if (! cachedLoggingEnabled) return;
+            string logMsg = string.Format("[{0:HH:mm:ss}] {1}", DateTime.Now, msg);
+            while (wifiLogBuffer.Count >= 250) { string temp; wifiLogBuffer.TryDequeue(out temp); }
+            wifiLogBuffer.Enqueue(logMsg);
+            if (! isHidden && this.Visible) {
+                SafeInvoke(() => {
+                    if (lstWifiLog != null && ! lstWifiLog.IsDisposed) {
+                        lstWifiLog.Items.Insert(0, logMsg);
+                        if (lstWifiLog.Items.Count > 250) lstWifiLog.Items.RemoveAt(lstWifiLog.Items.Count - 1);
+                    }
+                });
+            }
         }
 
         private void FlushWifiLogs() {
-            // Implementation...
+            if (wifiLogBuffer.IsEmpty) return;
+            SafeInvoke(() => {
+                if (lstWifiLog == null || lstWifiLog.IsDisposed) return;
+                string[] snapshot = wifiLogBuffer.ToArray();
+                Array.Reverse(snapshot);
+                lstWifiLog.BeginUpdate();
+                lstWifiLog.Items.Clear();
+                lstWifiLog.Items.AddRange(snapshot);
+                lstWifiLog.EndUpdate();
+            });
         }
 
         private void LoadWifiConfig() {
-            // Implementation...
+            try {
+                if (File.Exists(wifiConfigPath)) {
+                    foreach (string line in File.ReadAllLines(wifiConfigPath)) {
+                        string[] p = line.Split('=');
+                        if (p.Length == 2) {
+                            try {
+                                if(p[0]=="Timeout") wifiTimeout = int.Parse(p[1]);
+                                if(p[0]=="Threshold") wifiFailureThreshold = int.Parse(p[1]);
+                                if(p[0]=="TTL") wifiTTL = int.Parse(p[1]);
+                                if(p[0]=="Buffer") wifiBufferSize = int.Parse(p[1]);
+                                if(p[0]=="SignalInterval") signalUpdateInterval = int.Parse(p[1]);
+                            } catch { }
+                        }
+                    }
+                }
+            } catch { }
         }
 
         private void SaveWifiConfig() {
-             // Implementation...
+            try {
+                int timeout=1000, threshold=2, ttl=64, buffer=32, signalInt=5000;
+                SafeInvokeSync(() => {
+                    if (numWifiTimeout != null) timeout = (int)numWifiTimeout.Value;
+                    if (numWifiFailureThreshold != null) threshold = (int)numWifiFailureThreshold.Value;
+                    if (numWifiTTL != null) ttl = (int)numWifiTTL.Value;
+                    if (numWifiBufferSize != null) buffer = (int)numWifiBufferSize.Value;
+                    if (numSignalInterval != null) signalInt = (int)numSignalInterval.Value * 1000;
+                });
+
+                string tempPath = wifiConfigPath + ".tmp";
+                File.WriteAllLines(tempPath, new string[] {
+                    string.Format("Timeout={0}", timeout),
+                    string.Format("Threshold={0}", threshold),
+                    string.Format("TTL={0}", ttl),
+                    string.Format("Buffer={0}", buffer),
+                    string.Format("SignalInterval={0}", signalInt)
+                });
+
+                if (File.Exists(wifiConfigPath)) File.Delete(wifiConfigPath);
+                File.Move(tempPath, wifiConfigPath);
+
+                wifiTimeout = timeout;
+                wifiFailureThreshold = threshold;
+                wifiTTL = ttl;
+                wifiBufferSize = buffer;
+                signalUpdateInterval = signalInt;
+
+                if (wifiSignalTimer != null) {
+                    bool wasEnabled = wifiSignalTimer.Enabled;
+                    wifiSignalTimer.Stop();
+                    if (signalUpdateInterval >= 1000) wifiSignalTimer.Interval = signalUpdateInterval;
+                    if (wasEnabled) wifiSignalTimer.Start();
+                }
+                SafeMessageBox("Ayarlar kaydedildi.");
+            } catch (Exception ex) { SafeMessageBox("Kaydetme hatasi: " + ex.Message); }
         }
     }
 }

@@ -11,26 +11,11 @@ using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Management;
 using Microsoft.Win32;
+using System.Linq;
 
 namespace AnoreksikSuite {
     public partial class MainForm {
-        // --- FIELDS from Original v7.cs ---
-        private TabPage dashboardPage, ramPage, cpuPage, netPage, diskPage, panoPage;
-        private CheckBox chkEnableWifi, chkEnableRam, chkEnableCpu, chkEnableNet, chkEnableDisk, chkEnablePano;
-
-        // Dashboard - WiFi Alt Özellikleri
-        private CheckBox chkWifiPingSelect, chkWifiSignal, chkWifiCustomInterval, chkWifiTTL;
-        private CheckBox chkWifiKeepAlive, chkWifiLogging;
-
-        // Dashboard - RAM Alt Özellikleri
-        private CheckBox chkDashRamAuto, chkDashStandbyAuto, chkDashPageFault;
-
-        // Dashboard - Disk Alt Özellikleri
-        private CheckBox chkDashTemp, chkDashPrefetch, chkDashUpdate, chkDashRecycle;
-        private CheckBox chkDashWer, chkDashThumbnails, chkDashDism, chkDashBrowser;
-        private CheckBox chkDashInstaller, chkDashVSS;
-
-        private Label lblDashInfo;
+        // --- FIELDS for Legacy Logic ---
 
         // RAM & CPU
         private NumericUpDown numRamCpu, numRamTrigger, numRamInterval, numStandbyTrigger;
@@ -51,19 +36,23 @@ namespace AnoreksikSuite {
         private ProgressBar prgDisk;
         private ComboBox cmbBrowserList;
 
-        // PANO
-        private RichTextBox rtbClip;
-        private NumericUpDown numClipLimit;
-        private string lastClipText = "";
-        private int clipLimit = 5000;
-        private Label lblPanoInfo;
-
         // NET
         private ComboBox cmbDnsProvider;
         private Label lblNetInfo, lblTcpInfo, lblQuantumInfo, lblNicInfo, lblArpInfo, lblDscpInfo, lblMsmqInfo;
-        private string activeAdapter = "Wi-Fi";
-
         private ComboBox cmbNetAdapter;
+
+        // --- SHARED HELPER METHODS (Unifying here) ---
+        private void RunCMD(string cmd) {
+            try {
+                ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", "/C " + cmd);
+                psi.CreateNoWindow = true;
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                psi.WindowStyle = ProcessWindowStyle.Hidden;
+                Process.Start(psi).WaitForExit(5000);
+            } catch { }
+        }
 
         // --- DASHBOARD LOGIC ---
         private void InitTab_Dashboard() {
@@ -72,7 +61,7 @@ namespace AnoreksikSuite {
             dashboardPage.Name = "DASHBOARD";
             dashboardPage.AutoScroll = true;
 
-            lblDashInfo = CreateLabel("Kullanmak istediginiz ozellikleri aktif edin - Kapali moduller CPU/RAM kullanmaz", 10, 10, 9, dashboardPage);
+            Label lblDashInfo = CreateLabel("Kullanmak istediginiz ozellikleri aktif edin - Kapali moduller CPU/RAM kullanmaz", 10, 10, 9, dashboardPage);
             lblDashInfo.ForeColor = Color.Cyan;
             lblDashInfo.Font = new Font("Arial", 9, FontStyle.Bold);
 
@@ -392,18 +381,6 @@ namespace AnoreksikSuite {
              SafeMessageBox("DNS Ayarlandi!");
         }
 
-        private void RunCMD(string cmd) {
-            try {
-                ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", "/C " + cmd);
-                psi.CreateNoWindow = true;
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-                psi.WindowStyle = ProcessWindowStyle.Hidden;
-                Process.Start(psi).WaitForExit(5000);
-            } catch { }
-        }
-
         // --- DISK MODULE ---
         private void InitTab_DISK() {
             diskPage = new TabPage("DISK");
@@ -429,8 +406,10 @@ namespace AnoreksikSuite {
 
         private void CleanDirSafe(string path) {
              if (!Directory.Exists(path)) return;
-             foreach(var f in Directory.GetFiles(path)) try { File.Delete(f); } catch {}
-             foreach(var d in Directory.GetDirectories(path)) try { Directory.Delete(d, true); } catch {}
+             try {
+                 foreach(var f in Directory.GetFiles(path)) try { File.Delete(f); } catch {}
+                 foreach(var d in Directory.GetDirectories(path)) try { Directory.Delete(d, true); } catch {}
+             } catch { }
         }
 
         // --- HELPERS ---

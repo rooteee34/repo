@@ -5,6 +5,7 @@ using Microsoft.Win32;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Management;
+using System.Threading.Tasks;
 
 namespace AnoreksikSuite {
     public partial class MainForm {
