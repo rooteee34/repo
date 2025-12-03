@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using SystemManager.Utilities;
-using Microsoft.Win32.TaskScheduler;
+// Note: Microsoft.Win32.TaskScheduler is an optional NuGet package
+// If not installed, Task Scheduler tab will show a message
+// Install via: Install-Package TaskScheduler
 
 namespace SystemManager.Modules.StartupManager
 {
@@ -128,28 +130,56 @@ namespace SystemManager.Modules.StartupManager
 
             try
             {
-                using (var ts = new TaskService())
+                // Note: This requires Microsoft.Win32.TaskScheduler NuGet package
+                // If not available, use alternate method below
+                
+                // Alternate method: Use WMI to query scheduled tasks
+                using (var searcher = new System.Management.ManagementObjectSearcher(
+                    "SELECT * FROM Win32_ScheduledJob"))
                 {
-                    foreach (var task in ts.RootFolder.AllTasks)
+                    foreach (System.Management.ManagementObject obj in searcher.Get())
                     {
-                        if (task.Definition.Triggers.Any(t => t.TriggerType == TaskTriggerType.Logon || 
-                                                               t.TriggerType == TaskTriggerType.Boot))
+                        tasks.Add(new StartupEntry
                         {
-                            var action = task.Definition.Actions.FirstOrDefault();
-                            tasks.Add(new StartupEntry
-                            {
-                                Name = task.Name,
-                                Command = action?.ToString() ?? "N/A",
-                                Location = task.Path,
-                                Type = "Task Scheduler"
-                            });
-                        }
+                            Name = obj["Name"]?.ToString() ?? "Unknown",
+                            Command = obj["Command"]?.ToString() ?? "N/A",
+                            Location = "Task Scheduler",
+                            Type = "Scheduled Task"
+                        });
                     }
                 }
+                
+                // If TaskScheduler library is available, use this code instead:
+                // using (var ts = new TaskService())
+                // {
+                //     foreach (var task in ts.RootFolder.AllTasks)
+                //     {
+                //         if (task.Definition.Triggers.Any(t => t.TriggerType == TaskTriggerType.Logon || 
+                //                                                t.TriggerType == TaskTriggerType.Boot))
+                //         {
+                //             var action = task.Definition.Actions.FirstOrDefault();
+                //             tasks.Add(new StartupEntry
+                //             {
+                //                 Name = task.Name,
+                //                 Command = action?.ToString() ?? "N/A",
+                //                 Location = task.Path,
+                //                 Type = "Task Scheduler"
+                //             });
+                //         }
+                //     }
+                // }
             }
             catch
             {
                 // Handle exceptions - Task Scheduler access may require admin
+                // Add a placeholder entry to inform user
+                tasks.Add(new StartupEntry
+                {
+                    Name = "Task Scheduler Access",
+                    Command = "Requires Administrator privileges or TaskScheduler NuGet package",
+                    Location = "N/A",
+                    Type = "Info"
+                });
             }
 
             return tasks;
