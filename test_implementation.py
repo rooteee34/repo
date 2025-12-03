@@ -5,6 +5,7 @@ meets all requirements from the problem statement.
 """
 
 import json
+import os
 from meta_prompt_research_loop import MetaPromptResearchLoop
 
 
@@ -224,21 +225,22 @@ def test_json_serialization():
     
     # Save to JSON
     filename = "test_iteration.json"
-    loop.save_iteration(result, filename)
-    
-    # Load and verify
-    with open(filename, 'r') as f:
-        loaded = json.load(f)
-    
-    assert loaded['iteration'] == result['iteration']
-    assert loaded['self_critique'] == result['self_critique']
-    assert loaded['master_prompt'] == result['master_prompt']
-    
-    # Clean up
-    import os
-    os.remove(filename)
-    
-    print("✓ JSON serialization working")
+    try:
+        loop.save_iteration(result, filename)
+        
+        # Load and verify
+        with open(filename, 'r') as f:
+            loaded = json.load(f)
+        
+        assert loaded['iteration'] == result['iteration']
+        assert loaded['self_critique'] == result['self_critique']
+        assert loaded['master_prompt'] == result['master_prompt']
+        
+        print("✓ JSON serialization working")
+    finally:
+        # Clean up - ensure file is removed even if assertions fail
+        if os.path.exists(filename):
+            os.remove(filename)
 
 
 def run_all_tests():

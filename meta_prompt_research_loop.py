@@ -8,7 +8,6 @@ technical analysis strategies.
 """
 
 import json
-import sys
 from datetime import datetime
 from typing import Dict, List, Optional
 
